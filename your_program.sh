@@ -8,6 +8,9 @@
 
 set -e # Exit early if any commands fail
 
+# Set RUST_LOG to info to see logs
+export RUST_LOG=info
+
 # Copied from .codecrafters/compile.sh
 #
 # - Edit this to change how your program compiles locally
