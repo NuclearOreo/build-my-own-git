@@ -22,11 +22,15 @@ fn main() {
         "init" => initialize_git_repository(), // Initialize git repository
         "cat-file" => print_git_object_contents(&args[2..]), // Print git object contents
         "hash-object" => {
-            hash_object(&args[2..]);
-        } // Hash object
+            // Hash object
+            let hash = hash_object(&args[2..]);
+            println!("{}", hash);
+        }
         "ls-tree" => list_tree_contents(&args[2..]), // List tree contents
         "write-tree" => {
-            write_tree(&args[2..]);
+            // Write tree
+            let hash = write_tree(&args[2..]);
+            println!("{}", hash);
         } // Write tree
         _ => println!("unknown command: {}", args[1]),
     }

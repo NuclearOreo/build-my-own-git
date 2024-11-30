@@ -58,9 +58,12 @@ pub fn hash_object(args: &[String]) -> String {
     let hash = hasher.finalize();
     let hash_string = format!("{:x}", hash);
 
-    // Creating object directory
-    fs::create_dir(format!(".git/objects/{}", &hash_string[..2]))
+    fs::create_dir_all(format!(".git/objects/{}", &hash_string[..2]))
         .expect("Failed to create object directory");
+
+    // // Creating object directory
+    // fs::create_dir(format!(".git/objects/{}", &hash_string[..2]))
+    //     .expect("Failed to create object directory");
 
     // Compressing object
     let mut compressed_data = Vec::new();
@@ -80,7 +83,7 @@ pub fn hash_object(args: &[String]) -> String {
     }
 
     // Printing hash
-    println!("{}", hash_string);
+    // println!("{}", hash_string);
     hash_string
 }
 
@@ -158,10 +161,10 @@ pub fn write_tree(args: &[String]) -> String {
     let entries = fs::read_dir("./")
         .expect("Failed to read directory")
         .filter_map(Result::ok)
-        .filter(|entry| {
+        .filter(|entry: &fs::DirEntry| {
             let path = entry.path();
             // Skip .git directory and hidden files
-            !path.to_str().unwrap_or("").starts_with(".")
+            !path.to_str().unwrap_or("").starts_with("./.")
         });
 
     // Sort entries to ensure consistent hashing
@@ -178,7 +181,7 @@ pub fn write_tree(args: &[String]) -> String {
         } else if metadata.permissions().mode() & 0o111 != 0 {
             "100755"
         } else {
-            "111644"
+            "100644"
         };
 
         let hash = if metadata.is_dir() {
@@ -196,7 +199,7 @@ pub fn write_tree(args: &[String]) -> String {
 
         // Format: mode<space>filename\0<20-byte-hash>
         tree_content.extend(format!("{} {}\0", mode, name).as_bytes());
-        tree_content.extend(hex::decode(&hash).expect("Failed to decode hash"));
+        tree_content.extend(decode_hex(&hash).expect("Failed to decode hash"));
     }
 
     // Create tree object header
@@ -227,6 +230,13 @@ pub fn write_tree(args: &[String]) -> String {
     )
     .expect("Failed to write tree object");
 
-    println!("{}", hash_string);
+    // println!("{}", hash_string);
     hash_string
+}
+
+fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+        .collect()
 }
