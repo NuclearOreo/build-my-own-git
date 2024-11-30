@@ -81,3 +81,67 @@ pub fn hash_object(args: &[String]) {
     // Printing hash
     println!("{}", hash_string);
 }
+
+pub fn list_tree_contents(args: &[String]) {
+    if args.len() != 2 {
+        println!("usage: my-git ls-tree --name-only <hash>");
+        std::process::exit(1);
+    }
+
+    let hash = &args[1];
+
+    let content: Vec<u8> = fs::read(format!(".git/objects/{}/{}", &hash[..2], &hash[2..]))
+        .expect("Failed to read object");
+
+    let mut z_lib_decoder = ZlibDecoder::new(&content[..]);
+    let mut contents_decoded = vec![];
+    z_lib_decoder.read_to_end(&mut contents_decoded).unwrap();
+
+    let mut i = 0;
+    let mut hit_first_null: bool = false;
+    while i < contents_decoded.len() {
+        if !hit_first_null {
+            if contents_decoded[i] == b'\0' {
+                hit_first_null = true;
+            }
+            i += 1;
+            continue;
+        }
+        // Read the mode
+        let mut mode_end = i;
+        while contents_decoded[mode_end] != b' ' {
+            mode_end += 1;
+        }
+        let mode = std::str::from_utf8(&contents_decoded[i..mode_end]).unwrap();
+        i = mode_end + 1;
+        // Parses the type of the mode
+        let _mode_type = match mode {
+            "100644" => "blob", // Regular file
+            "100755" => "blob", // Executable file
+            "120000" => "blob", // Symbolic link
+            "40000" => "tree",  // Directory
+            _ => "unknown",
+        };
+        // Read the filename
+        let mut name_end = i;
+        while contents_decoded[name_end] != b'\0' {
+            name_end += 1;
+        }
+        let name = std::str::from_utf8(&contents_decoded[i..name_end]).unwrap();
+        i = name_end + 1;
+        // Read the SHA-1 hash
+        let hash = &contents_decoded[i..i + 20];
+        let _hash = hash
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
+        i += 20;
+        println!("{}", name);
+        // if is_name_only {
+        // println!("{}", name);
+        // } else {
+        //     let mode = format!("{:06}", mode.parse::<u32>().unwrap());
+        //     println!("{} {} {}\t{}", mode, mode_type, hash, name);
+        // }
+    }
+}

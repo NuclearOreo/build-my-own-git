@@ -1,5 +1,7 @@
 mod commands;
-use commands::{hash_object, initialize_git_repository, print_git_object_contents};
+use commands::{
+    hash_object, initialize_git_repository, list_tree_contents, print_git_object_contents,
+};
 
 use std::env;
 
@@ -19,6 +21,7 @@ fn main() {
         "init" => initialize_git_repository(), // Initialize git repository
         "cat-file" => print_git_object_contents(&args[2..]), // Print git object contents
         "hash-object" => hash_object(&args[2..]), // Hash object
+        "ls-tree" => list_tree_contents(&args[2..]), // List tree contents
         _ => println!("unknown command: {}", args[1]),
     }
 }
