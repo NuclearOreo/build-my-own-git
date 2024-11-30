@@ -145,3 +145,12 @@ pub fn list_tree_contents(args: &[String]) {
         // }
     }
 }
+
+pub fn write_tree(args: &[String]) {
+    if args.len() != 0 {
+        println!("usage: my-git write-tree");
+        std::process::exit(1);
+    }
+
+    println!("write_tree: {:?}", args);
+}
