@@ -178,7 +178,7 @@ pub fn write_tree(args: &[String]) -> String {
         } else if metadata.permissions().mode() & 0o111 != 0 {
             "100755"
         } else {
-            "100644"
+            "111644"
         };
 
         let hash = if metadata.is_dir() {
