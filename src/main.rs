@@ -11,6 +11,7 @@ fn main() {
     env_logger::init();
     log::info!("Running my-git");
 
+    // Collecting arguments
     let args: Vec<String> = env::args().collect();
 
     // Commands
@@ -30,10 +31,13 @@ fn main() {
         let content = fs::read(format!(".git/objects/{}/{}", &hash[..2], &hash[2..]))
             .expect("Failed to read object");
 
-        let mut z = ZlibDecoder::new(&content[..]);
-        let mut obj_content = String::new();
-        z.read_to_string(&mut obj_content).unwrap();
-        print!("{}", &obj_content[8..]);
+        let mut z_lib_decoder = ZlibDecoder::new(&content[..]);
+        let mut buffer = String::new();
+        z_lib_decoder
+            .read_to_string(&mut buffer)
+            .expect("Failed to read object content");
+
+        print!("{}", &buffer[8..]);
     } else {
         println!("unknown command: {}", args[1])
     }
