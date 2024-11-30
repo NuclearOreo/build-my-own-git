@@ -21,9 +21,13 @@ fn main() {
     match args[1].as_str() {
         "init" => initialize_git_repository(), // Initialize git repository
         "cat-file" => print_git_object_contents(&args[2..]), // Print git object contents
-        "hash-object" => hash_object(&args[2..]), // Hash object
+        "hash-object" => {
+            hash_object(&args[2..]);
+        } // Hash object
         "ls-tree" => list_tree_contents(&args[2..]), // List tree contents
-        "write-tree" => write_tree(&args[2..]), // Write tree
+        "write-tree" => {
+            write_tree(&args[2..]);
+        } // Write tree
         _ => println!("unknown command: {}", args[1]),
     }
 }

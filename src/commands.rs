@@ -1,5 +1,6 @@
 use std::fs;
 use std::io::prelude::*;
+use std::os::unix::fs::PermissionsExt;
 
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
@@ -34,7 +35,7 @@ pub fn print_git_object_contents(args: &[String]) {
     print!("{}", &buffer[8..]);
 }
 
-pub fn hash_object(args: &[String]) {
+pub fn hash_object(args: &[String]) -> String {
     if args.len() != 2 {
         println!("usage: my-git hash-object -w <file>");
         std::process::exit(1);
@@ -80,6 +81,7 @@ pub fn hash_object(args: &[String]) {
 
     // Printing hash
     println!("{}", hash_string);
+    hash_string
 }
 
 pub fn list_tree_contents(args: &[String]) {
@@ -146,11 +148,85 @@ pub fn list_tree_contents(args: &[String]) {
     }
 }
 
-pub fn write_tree(args: &[String]) {
+pub fn write_tree(args: &[String]) -> String {
     if args.len() != 0 {
         println!("usage: my-git write-tree");
         std::process::exit(1);
     }
 
-    println!("write_tree: {:?}", args);
+    let mut tree_content = Vec::new();
+    let entries = fs::read_dir("./")
+        .expect("Failed to read directory")
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            let path = entry.path();
+            // Skip .git directory and hidden files
+            !path.to_str().unwrap_or("").starts_with(".")
+        });
+
+    // Sort entries to ensure consistent hashing
+    let mut entries: Vec<_> = entries.collect();
+    entries.sort_by_key(|entry| entry.path());
+
+    for entry in entries {
+        let path = entry.path();
+        let name = path.file_name().unwrap().to_str().unwrap();
+
+        let metadata = entry.metadata().expect("Failed to read metadata");
+        let mode = if metadata.is_dir() {
+            "40000"
+        } else if metadata.permissions().mode() & 0o111 != 0 {
+            "100755"
+        } else {
+            "100644"
+        };
+
+        let hash = if metadata.is_dir() {
+            // Recursively handle directories
+            let args = Vec::new();
+            std::env::set_current_dir(&path).expect("Failed to change directory");
+            let hash = write_tree(&args);
+            std::env::set_current_dir("..").expect("Failed to change back to parent directory");
+            hash
+        } else {
+            // Hash the file contents
+            let hash_args = vec!["-w".to_string(), name.to_string()];
+            hash_object(&hash_args)
+        };
+
+        // Format: mode<space>filename\0<20-byte-hash>
+        tree_content.extend(format!("{} {}\0", mode, name).as_bytes());
+        tree_content.extend(hex::decode(&hash).expect("Failed to decode hash"));
+    }
+
+    // Create tree object header
+    let mut content_with_header = format!("tree {}\0", tree_content.len()).as_bytes().to_vec();
+    content_with_header.extend(&tree_content);
+
+    // Hash the tree
+    let mut hasher = Sha1::new();
+    hasher.update(&content_with_header);
+    let hash = hasher.finalize();
+    let hash_string = format!("{:x}", hash);
+
+    // Create object directory
+    fs::create_dir_all(format!(".git/objects/{}", &hash_string[..2]))
+        .expect("Failed to create object directory");
+
+    // Compress and write the tree object
+    let mut compressed_data = Vec::new();
+    let mut encoder = ZlibEncoder::new(&mut compressed_data, flate2::Compression::default());
+    encoder
+        .write_all(&content_with_header)
+        .expect("Failed to compress tree");
+    let compressed_content = encoder.finish().expect("Failed to finish compression");
+
+    fs::write(
+        format!(".git/objects/{}/{}", &hash_string[..2], &hash_string[2..]),
+        &compressed_content,
+    )
+    .expect("Failed to write tree object");
+
+    println!("{}", hash_string);
+    hash_string
 }
