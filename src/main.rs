@@ -1,8 +1,8 @@
 mod commands;
 mod utils;
 use commands::{
-    hash_object, initialize_git_repository, list_tree_contents, print_git_object_contents,
-    write_tree,
+    commit_tree, hash_object, initialize_git_repository, list_tree_contents,
+    print_git_object_contents, write_tree,
 };
 
 use std::env;
@@ -33,6 +33,11 @@ fn main() {
             let hash = write_tree(&args[2..]);
             println!("{}", hash);
         } // Write tree
+        "commit-tree" => {
+            // Commit tree
+            let hash = commit_tree(&args[2..]);
+            println!("{}", hash);
+        }
         _ => println!("unknown command: {}", args[1]),
     }
 }

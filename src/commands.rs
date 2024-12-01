@@ -228,3 +228,7 @@ pub fn write_tree(args: &[String]) -> String {
 
     hash_string
 }
+
+pub fn commit_tree(args: &[String]) -> String {
+    "".to_string()
+}
