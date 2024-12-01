@@ -25,15 +25,18 @@ pub fn print_git_object_contents(args: &[String]) {
     let _obj_type = &args[0];
     let hash = &args[1];
 
+    // Read the compressed object from the git object store
     let content: Vec<u8> = fs::read(format!(".git/objects/{}/{}", &hash[..2], &hash[2..]))
         .expect("Failed to read object");
 
+    // Decompress the object using zlib
     let mut z_lib_decoder = ZlibDecoder::new(&content[..]);
     let mut buffer = String::new();
     z_lib_decoder
         .read_to_string(&mut buffer)
         .expect("Failed to read object content");
 
+    // Skip the header (type and size) and print just the content
     print!("{}", &buffer[8..]);
 }
 
@@ -50,11 +53,11 @@ pub fn hash_object(args: &[String]) -> String {
     // Reading object
     let content: Vec<u8> = fs::read(format!("./{}", path)).expect("Failed to read object");
 
-    // Creating object header
+    // Git objects are stored with a header in the format: "<type> <size>\0<content>"
     let mut content_with_header = format!("blob {}\0", content.len()).as_bytes().to_vec();
     content_with_header.extend(&content);
 
-    // Hashing object
+    // Hash the object using SHA-1 (Git's hash algorithm)
     let mut hasher = Sha1::new();
     hasher.update(&content_with_header);
     let hash = hasher.finalize();
@@ -98,6 +101,9 @@ pub fn list_tree_contents(args: &[String]) {
     let mut contents_decoded = vec![];
     z_lib_decoder.read_to_end(&mut contents_decoded).unwrap();
 
+    // Parse the tree object format:
+    // - Skip header until first null byte
+    // - Then read entries in format: <mode> <filename>\0<20-byte-hash>
     let mut i = 0;
     let mut hit_first_null: bool = false;
     while i < contents_decoded.len() {
@@ -115,12 +121,16 @@ pub fn list_tree_contents(args: &[String]) {
         }
         let mode = std::str::from_utf8(&contents_decoded[i..mode_end]).unwrap();
         i = mode_end + 1;
-        // Parses the type of the mode
+        // Git mode meanings:
+        // 100644 - Regular file
+        // 100755 - Executable file
+        // 120000 - Symbolic link
+        // 40000  - Directory
         let _mode_type = match mode {
-            "100644" => "blob", // Regular file
-            "100755" => "blob", // Executable file
-            "120000" => "blob", // Symbolic link
-            "40000" => "tree",  // Directory
+            "100644" => "blob",
+            "100755" => "blob",
+            "120000" => "blob",
+            "40000" => "tree",
             _ => "unknown",
         };
         // Read the filename
