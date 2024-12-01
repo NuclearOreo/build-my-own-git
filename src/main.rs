@@ -1,4 +1,5 @@
 mod commands;
+mod utils;
 use commands::{
     hash_object, initialize_git_repository, list_tree_contents, print_git_object_contents,
     write_tree,

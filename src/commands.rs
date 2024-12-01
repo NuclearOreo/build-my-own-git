@@ -6,6 +6,8 @@ use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use sha1::{Digest, Sha1};
 
+use crate::utils::decode_hex;
+
 pub fn initialize_git_repository() {
     fs::create_dir(".git").expect("Failed to create .git directory");
     fs::create_dir(".git/objects").expect("Failed to create .git/objects directory");
@@ -61,10 +63,6 @@ pub fn hash_object(args: &[String]) -> String {
     fs::create_dir_all(format!(".git/objects/{}", &hash_string[..2]))
         .expect("Failed to create object directory");
 
-    // // Creating object directory
-    // fs::create_dir(format!(".git/objects/{}", &hash_string[..2]))
-    //     .expect("Failed to create object directory");
-
     // Compressing object
     let mut compressed_data = Vec::new();
     let mut encoder = ZlibEncoder::new(&mut compressed_data, flate2::Compression::default());
@@ -82,8 +80,6 @@ pub fn hash_object(args: &[String]) -> String {
         .expect("Failed to write object");
     }
 
-    // Printing hash
-    // println!("{}", hash_string);
     hash_string
 }
 
@@ -230,13 +226,5 @@ pub fn write_tree(args: &[String]) -> String {
     )
     .expect("Failed to write tree object");
 
-    // println!("{}", hash_string);
     hash_string
-}
-
-fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
-    (0..s.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
-        .collect()
 }
