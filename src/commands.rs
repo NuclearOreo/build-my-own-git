@@ -330,3 +330,12 @@ pub fn commit_tree(args: &[String]) -> String {
 
     hash_string
 }
+
+pub fn clone_repository(args: &[String]) {
+    if args.len() == 0 {
+        println!("usage: my-git clone <repository-url>");
+        std::process::exit(1);
+    }
+
+    // let url = &args[0];
+}

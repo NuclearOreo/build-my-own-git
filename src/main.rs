@@ -1,7 +1,7 @@
 mod commands;
 mod utils;
 use commands::{
-    commit_tree, hash_object, initialize_git_repository, list_tree_contents,
+    clone_repository, commit_tree, hash_object, initialize_git_repository, list_tree_contents,
     print_git_object_contents, write_tree,
 };
 
@@ -38,6 +38,7 @@ fn main() {
             let hash = commit_tree(&args[2..]);
             println!("{}", hash);
         }
+        "clone" => clone_repository(&args[2..]), // Clone repository
         _ => println!("unknown command: {}", args[1]),
     }
 }
