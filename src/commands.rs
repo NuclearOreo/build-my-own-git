@@ -230,5 +230,93 @@ pub fn write_tree(args: &[String]) -> String {
 }
 
 pub fn commit_tree(args: &[String]) -> String {
-    "".to_string()
+    if args.len() < 3 || args.len() > 5 {
+        println!("usage: my-git commit-tree <tree-sha> -m <message> [-p <parent-commit>]");
+        std::process::exit(1);
+    }
+
+    // Parse arguments in any order
+    let mut tree_sha = None;
+    let mut message = None;
+    let mut parent = None;
+    let mut i = 0;
+
+    while i < args.len() {
+        match args[i].as_str() {
+            "-m" => {
+                if i + 1 < args.len() {
+                    message = Some(&args[i + 1]);
+                    i += 2;
+                } else {
+                    println!("Error: -m flag requires a message");
+                    std::process::exit(1);
+                }
+            }
+            "-p" => {
+                if i + 1 < args.len() {
+                    parent = Some(&args[i + 1]);
+                    i += 2;
+                } else {
+                    println!("Error: -p flag requires a commit hash");
+                    std::process::exit(1);
+                }
+            }
+            arg => {
+                tree_sha = Some(arg);
+                i += 1;
+            }
+        }
+    }
+
+    // Validate required arguments
+    let tree_sha = tree_sha.expect("Tree SHA is required");
+    let message = message.expect("Commit message is required");
+
+    // Create commit content
+    let mut commit_content = String::new();
+    commit_content.push_str(&format!("tree {}\n", tree_sha));
+
+    // Add parent if it exists
+    if let Some(parent_hash) = parent {
+        commit_content.push_str(&format!("parent {}\n", parent_hash));
+    }
+
+    // Add author and committer (using placeholder values - you might want to make these configurable)
+    commit_content.push_str("author John Doe <john@example.com> 1234567890 +0000\n");
+    commit_content.push_str("committer John Doe <john@example.com> 1234567890 +0000\n");
+    commit_content.push_str("\n"); // Empty line between metadata and message
+    commit_content.push_str(message);
+    commit_content.push_str("\n");
+
+    // Create commit object header
+    let mut content_with_header = format!("commit {}\0", commit_content.len())
+        .as_bytes()
+        .to_vec();
+    content_with_header.extend(commit_content.as_bytes());
+
+    // Hash the commit
+    let mut hasher = Sha1::new();
+    hasher.update(&content_with_header);
+    let hash = hasher.finalize();
+    let hash_string = format!("{:x}", hash);
+
+    // Create object directory
+    fs::create_dir_all(format!(".git/objects/{}", &hash_string[..2]))
+        .expect("Failed to create object directory");
+
+    // Compress and write the commit object
+    let mut compressed_data = Vec::new();
+    let mut encoder = ZlibEncoder::new(&mut compressed_data, flate2::Compression::default());
+    encoder
+        .write_all(&content_with_header)
+        .expect("Failed to compress commit");
+    let compressed_content = encoder.finish().expect("Failed to finish compression");
+
+    fs::write(
+        format!(".git/objects/{}/{}", &hash_string[..2], &hash_string[2..]),
+        &compressed_content,
+    )
+    .expect("Failed to write commit object");
+
+    hash_string
 }
