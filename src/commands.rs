@@ -332,10 +332,13 @@ pub fn commit_tree(args: &[String]) -> String {
 }
 
 pub fn clone_repository(args: &[String]) {
-    if args.len() == 0 {
-        println!("usage: my-git clone <repository-url>");
+    if args.len() != 2 && args.len() != 1 {
+        println!("usage: my-git clone <repository-url> <directory>");
         std::process::exit(1);
     }
 
-    // let url = &args[0];
+    let url = &args[0];
+    let directory = &args[1];
+
+    git2::Repository::clone(url, directory).expect("Failed to clone repository");
 }
